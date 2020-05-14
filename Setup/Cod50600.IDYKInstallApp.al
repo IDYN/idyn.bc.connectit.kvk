@@ -3,9 +3,92 @@ codeunit 50600 "IDYK Install App"
     Subtype = Install;
 
     trigger OnInstallAppPerCompany()
+    var
+        Setup: Record "IDYC Setup";
     begin
         EnableHttpCallsInSandbox();
+
+        if Setup.IsEmpty() then begin
+            Setup.Init();
+            Setup."License Key" := 'CONNECTITTESTKEY';
+            Setup.Insert(true);
+
+            InitNoSeries(Setup);
+        end;
+
         CreateImportDefinition('https://idynconnectit.blob.core.windows.net/app-465737b9-d884-4635-8136-433e652d66ba/v1.0.0.0/kvk_import.json');
+    end;
+
+    local procedure InitNoSeries(var Setup: Record "IDYC Setup")
+    var
+        NoSeries: Record "No. Series";
+        NoSeriesLine: Record "No. Series Line";
+    begin
+        NoSeries.SetRange("Code", 'CI-IMPORT');
+        if NoSeries.IsEmpty() then begin
+            NoSeries.Init();
+            NoSeries.Validate(Code, 'CI-IMPORT');
+            NoSeries.Description := 'ConnectIT Import';
+            NoSeries."Default Nos." := true;
+            NoSeries.Insert(true);
+
+            NoSeriesLine.Init();
+            NoSeriesLine.Validate("Series Code", NoSeries.Code);
+            NoSeriesLine.Validate("Line No.", 10000);
+            NoSeriesLine.Validate("Starting No.", 'I-0001');
+            NoSeriesLine.Insert(true);
+
+
+            if Setup."Import No. Series" = '' then
+                Setup."Import No. Series" := 'CI-IMPORT';
+
+            Clear(NoSeries);
+            Clear(NoSeriesLine);
+        end;
+
+        NoSeries.SetRange("Code", 'CI-EXPORT');
+        if NoSeries.IsEmpty() then begin
+            NoSeries.Init();
+            NoSeries.Validate(Code, 'CI-EXPORT');
+            NoSeries.Description := 'ConnectIT Export';
+            NoSeries."Default Nos." := true;
+            NoSeries.Insert(true);
+
+            NoSeriesLine.Init();
+            NoSeriesLine.Validate("Series Code", NoSeries.Code);
+            NoSeriesLine.Validate("Line No.", 10000);
+            NoSeriesLine.Validate("Starting No.", 'E-0001');
+            NoSeriesLine.Insert(true);
+
+            if Setup."Export No. Series" = '' then
+                Setup."Export No. Series" := 'BCC-MED';
+
+            Clear(NoSeries);
+            Clear(NoSeriesLine);
+        end;
+
+        NoSeries.SetRange("Code", 'CI-TASK');
+        if NoSeries.IsEmpty() then begin
+            NoSeries.Init();
+            NoSeries.Validate(Code, 'CI-TASK');
+            NoSeries.Description := 'ConnectIT Task';
+            NoSeries."Default Nos." := true;
+            NoSeries.Insert(true);
+
+            NoSeriesLine.Init();
+            NoSeriesLine.Validate("Series Code", NoSeries.Code);
+            NoSeriesLine.Validate("Line No.", 10000);
+            NoSeriesLine.Validate("Starting No.", 'T-0001');
+            NoSeriesLine.Insert(true);
+
+            if Setup."Task No. Series" = '' then
+                Setup."Task No. Series" := 'CI-TASK';
+
+            Clear(NoSeries);
+            Clear(NoSeriesLine);
+        end;
+
+        Setup.Modify(true);
     end;
 
     local procedure CreateImportDefinition(DefinitionTemplateUrl: Text)
@@ -74,7 +157,14 @@ codeunit 50600 "IDYK Install App"
         if not EnvironmentInformation.IsSandbox() then
             exit;
 
+        Clear(NAVAppSettings);
+        NAVAppSettings."App ID" := '9e0ee02b-484d-4487-8d74-961ece2357c5';
+        NAVAppSettings."Allow HttpClient Requests" := true;
+        if not NAVAppSettings.Insert() then
+            NAVAppSettings.Modify();
+
         NavApp.GetCurrentModuleInfo(AppInfo);
+        Clear(NAVAppSettings);
         NAVAppSettings."App ID" := AppInfo.Id();
         NAVAppSettings."Allow HttpClient Requests" := true;
         if not NAVAppSettings.Insert() then
