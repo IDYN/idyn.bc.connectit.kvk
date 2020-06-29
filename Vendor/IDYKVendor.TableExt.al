@@ -1,4 +1,4 @@
-tableextension 50600 "IDYK" extends Vendor
+tableextension 50600 "IDYK Vendor" extends Vendor
 {
     fields
     {
